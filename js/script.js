@@ -42,35 +42,53 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevBtn = document.querySelector('.slider-prev');
     const nextBtn = document.querySelector('.slider-next');
     let currentSlide = 0;
+    let isAnimating = false;
     
     // Create dots
-    slides.forEach((_, i) => {
-        const dot = document.createElement('button');
-        dot.classList.add('slider-dot');
-        if (i === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToSlide(i));
-        dotsContainer.appendChild(dot);
-    });
+    if (dotsContainer && slides.length > 0) {
+        slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.classList.add('slider-dot');
+            dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+            if (i === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => !isAnimating && goToSlide(i));
+            dotsContainer.appendChild(dot);
+        });
+    }
     
     const dots = document.querySelectorAll('.slider-dot');
     
     function goToSlide(slideIndex) {
-        slides.forEach(slide => slide.classList.remove('active'));
-        dots.forEach(dot => dot.classList.remove('active'));
+        if (isAnimating || slideIndex === currentSlide) return;
+        isAnimating = true;
         
+        // Remove active class from current slide and dot
+        slides[currentSlide].classList.remove('active');
+        if (dots[currentSlide]) dots[currentSlide].classList.remove('active');
+        
+        // Add active class to new slide and dot
         currentSlide = slideIndex;
         slides[currentSlide].classList.add('active');
-        dots[currentSlide].classList.add('active');
+        if (dots[currentSlide]) dots[currentSlide].classList.add('active');
+        
+        // Reset animation flag after transition
+        setTimeout(() => {
+            isAnimating = false;
+        }, 600); // Match this with your CSS transition time
     }
     
     function nextSlide() {
-        currentSlide = (currentSlide + 1) % slides.length;
-        goToSlide(currentSlide);
+        if (!isAnimating) {
+            const nextIndex = (currentSlide + 1) % slides.length;
+            goToSlide(nextIndex);
+        }
     }
     
     function prevSlide() {
-        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-        goToSlide(currentSlide);
+        if (!isAnimating) {
+            const prevIndex = (currentSlide - 1 + slides.length) % slides.length;
+            goToSlide(prevIndex);
+        }
     }
     
     nextBtn.addEventListener('click', nextSlide);
@@ -94,15 +112,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     
     accordionHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-            this.classList.toggle('active');
+        header.addEventListener('click', function(e) {
+            e.preventDefault();
             const content = this.nextElementSibling;
+            const icon = this.querySelector('i');
             
+            // Toggle active state
+            this.classList.toggle('active');
+            
+            // Toggle icon
+            if (icon) {
+                icon.classList.toggle('fa-plus');
+                icon.classList.toggle('fa-minus');
+            }
+            
+            // Toggle content
             if (this.classList.contains('active')) {
                 content.style.maxHeight = content.scrollHeight + 'px';
+                content.style.opacity = '1';
             } else {
-                content.style.maxHeight = 0;
+                content.style.maxHeight = '0';
+                content.style.opacity = '0';
             }
+            
+            // Close other accordions
+            accordionHeaders.forEach(otherHeader => {
+                if (otherHeader !== this) {
+                    otherHeader.classList.remove('active');
+                    const otherContent = otherHeader.nextElementSibling;
+                    const otherIcon = otherHeader.querySelector('i');
+                    if (otherIcon) {
+                        otherIcon.classList.remove('fa-minus');
+                        otherIcon.classList.add('fa-plus');
+                    }
+                    if (otherContent) {
+                        otherContent.style.maxHeight = '0';
+                        otherContent.style.opacity = '0';
+                    }
+                }
+            });
         });
     });
 
@@ -111,14 +159,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabContents = document.querySelectorAll('.tab-content');
     
     tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
             const tabId = this.getAttribute('data-tab');
             
+            // Remove active class from all buttons and contents
             tabBtns.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             
+            // Add active class to clicked button and corresponding content
             this.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
         });
     });
 
